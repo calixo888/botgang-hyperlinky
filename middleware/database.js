@@ -1,22 +1,37 @@
-import { MongoClient } from 'mongodb';
-import nextConnect from 'next-connect';
+import { MongoClient } from 'mongodb'
 
-const mongoUrl = process.env.MONGO_URL || "mongodb://localhost:27017/botgang";
+let uri = "mongodb+srv://botgang:botgang888!@launch-tech-llc.nzae9.mongodb.net/botgang?retryWrites=true&w=majority";
+let dbName = "botgang";
 
-const client = new MongoClient(mongoUrl, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+let cachedClient = null
+let cachedDb = null
 
-async function database(req, res, next) {
-  if (!client.isConnected()) await client.connect();
-  req.dbClient = client;
-  req.db = client.db('botgang');
-  return next();
+if (!uri) {
+  throw new Error(
+    'Please define the MONGODB_URI environment variable inside .env.local'
+  )
 }
 
-const middleware = nextConnect();
+if (!dbName) {
+  throw new Error(
+    'Please define the MONGODB_DB environment variable inside .env.local'
+  )
+}
 
-middleware.use(database);
+export async function connectToDatabase() {
+  if (cachedClient && cachedDb) {
+    return { client: cachedClient, db: cachedDb }
+  }
 
-export default middleware;
+  const client = await MongoClient.connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+
+  const db = await client.db(dbName)
+
+  cachedClient = client
+  cachedDb = db
+
+  return { client, db }
+}
